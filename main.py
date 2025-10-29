@@ -173,5 +173,14 @@ def webhook():
     return "ok", 200
 
 if __name__ == "__main__":
-    # Chạy ứng dụng Flask
-    app.run(host="0.0.0.0", port=10000)
+    import sys
+    import logging
+
+    # Cho phép Flask in log ra console Render
+    logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+    app.logger.addHandler(logging.StreamHandler(sys.stdout))
+    app.logger.setLevel(logging.DEBUG)
+
+    # Bật debug để log chi tiết request
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 10000)), debug=True)
+
