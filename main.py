@@ -184,3 +184,11 @@ if __name__ == "__main__":
     # Bật debug để log chi tiết request
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 10000)), debug=True)
 
+import threading, time
+
+def heartbeat():
+    while True:
+        print("💓 Bot vẫn đang hoạt động...")
+        time.sleep(60 * 5)  # mỗi 5 phút in 1 lần
+
+threading.Thread(target=heartbeat, daemon=True).start()
