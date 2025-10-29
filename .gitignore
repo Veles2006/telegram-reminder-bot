@@ -1,0 +1,17 @@
+# --- Python ---
+__pycache__/
+*.pyc
+
+# --- Môi trường & bí mật ---
+.env
+node_modules/
+token.json
+
+# --- Ảnh / cache / output ---
+*.jpg
+*.png
+*.jpeg
+*.gif
+
+# --- Hệ thống ---
+.DS_Store

@@ -1,2 +1,7 @@
+Flask
 requests
-apscheduler
+openai
+pixivpy3
+python-dotenv
+cloudinary
+pymongo
