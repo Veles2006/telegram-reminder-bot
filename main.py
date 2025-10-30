@@ -37,6 +37,7 @@ for key, value in {
     "OPENAI_KEY": OPENAI_KEY,
     "PIXIV_REFRESH_TOKEN": PIXIV_REFRESH_TOKEN,
     "PIXIV_USER_ID": PIXIV_USER_ID,
+    "MONGO_URI": MONGO_URI,
 }.items():
     if not value:
         raise RuntimeError(f"⚠️ Thiếu biến môi trường: {key}")
