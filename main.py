@@ -5,6 +5,8 @@ import requests
 from flask import Flask, request
 import json
 import threading, time
+import certifi
+import logging
 
 
 # Thêm các import cần thiết từ telegram_daily.py
@@ -23,9 +25,11 @@ OPENAI_KEY = os.getenv("OPENAI_API_KEY")
 PIXIV_REFRESH_TOKEN = os.getenv("PIXIV_REFRESH_TOKEN")
 PIXIV_USER_ID = int(os.getenv("PIXIV_USER_ID", "0"))
 MONGO_URI = os.getenv("MONGODB_URI")    # Chuỗi kết nối MongoDB (đọc từ biến môi trường)
-client = MongoClient(MONGO_URI)
+client = MongoClient(MONGO_URI, tlsCAFile=certifi.where())
 db = client["lifeup-legend"]     # Tên database bạn đã tạo trên MongoDB
 collection = db["characters"] 
+
+logging.getLogger("pymongo").setLevel(logging.WARNING)
 
 # Kiểm tra biến môi trường (tùy chọn, để đảm bảo không thiếu)
 for key, value in {
