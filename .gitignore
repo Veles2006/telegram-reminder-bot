@@ -6,6 +6,7 @@ __pycache__/
 .env
 node_modules/
 token.json
+venv/
 
 # --- Ảnh / cache / output ---
 *.jpg

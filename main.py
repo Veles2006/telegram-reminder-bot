@@ -3,11 +3,16 @@ import html
 import random
 import requests
 from flask import Flask, request
+import json
+import threading, time
+
 
 # Thêm các import cần thiết từ telegram_daily.py
 from dotenv import load_dotenv
 from openai import OpenAI
 from pixivpy3 import AppPixivAPI
+from pymongo import MongoClient
+
 # (Có thể import cloudinary, MongoClient nếu dự định dùng, nhưng nếu không dùng có thể bỏ)
 
 # Nạp biến môi trường
@@ -17,6 +22,10 @@ CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")         # ID chat mặc định (có th�
 OPENAI_KEY = os.getenv("OPENAI_API_KEY")
 PIXIV_REFRESH_TOKEN = os.getenv("PIXIV_REFRESH_TOKEN")
 PIXIV_USER_ID = int(os.getenv("PIXIV_USER_ID", "0"))
+MONGO_URI = os.getenv("MONGODB_URI")    # Chuỗi kết nối MongoDB (đọc từ biến môi trường)
+client = MongoClient(MONGO_URI)
+db = client["lifeup-legend"]     # Tên database bạn đã tạo trên MongoDB
+collection = db["characters"] 
 
 # Kiểm tra biến môi trường (tùy chọn, để đảm bảo không thiếu)
 for key, value in {
@@ -141,6 +150,28 @@ def send_pixiv_image(chat_id: str):
     else:
         print(f"⚠️ Lỗi gửi ảnh Telegram (mã {res.status_code}): {res.text}")
 
+# Hàm gọi ChatGPT để tạo mô tả
+def parse_character_description(description: str) -> dict:
+    prompt = (
+        f"Hãy phân tích mô tả nhân vật sau và trích xuất thông tin dưới dạng JSON với các trường đã cho.\n"
+        f"Mô tả nhân vật: '''{description}'''\n"
+        f"Lưu ý: Nếu mô tả không nhắc đến trường nào, có thể bỏ qua trường đó."
+    )
+    try:
+        res = openai_client.chat.completions.create(
+            model="gpt-4",  # hoặc model phù hợp (gpt-3.5-turbo,...)
+            messages=[
+                {"role": "system", "content": "Bạn là trợ lý phân tích nhân vật."},
+                {"role": "user", "content": prompt}
+            ]
+        )
+        answer = res.choices[0].message.content.strip()
+        data = json.loads(answer)  # parse chuỗi JSON thành dict
+        return data
+    except Exception as e:
+        print(f"❌ Lỗi GPT parse: {e}")
+        return {}
+
 # Khởi tạo Flask app sau khi đã cấu hình mọi thứ
 app = Flask(__name__)
 
@@ -167,10 +198,37 @@ def webhook():
             except Exception as e:
                 # Nếu có lỗi, thông báo về chat
                 send_message(chat_id, f"Đã xảy ra lỗi: {e}")
+        elif text.startswith("/createCharacter"):
+            parts = text.split(" ", 1)
+            if len(parts) < 2:
+                send_message(chat_id, "Hãy nhập mô tả nhân vật sau lệnh /createCharacter.")
+            else:
+                description = parts[1]
+                # Gọi GPT phân tích mô tả nhân vật
+                char_data = parse_character_description(description)
+                if not char_data:
+                    send_message(chat_id, "❌ Không trích xuất được thông tin từ mô tả.")
+                else:
+                    # Thêm trường hệ thống
+                    char_data["created_at"] = time.time()  # hoặc datetime.now().isoformat()
+                    char_data["status"] = "active"
+                    result = collection.insert_one(char_data)
+                    new_id = str(result.inserted_id)
+                    send_message(chat_id, f"✅ Đã tạo nhân vật mới với ID: {new_id}")
+                    print(f"Đã thêm nhân vật ID {new_id}: {char_data}")
+
         else:
             send_message(chat_id, "Câu lệnh không hợp lệ 🫠")
 
     return "ok", 200
+
+
+def heartbeat():
+    while True:
+        print("💓 Bot vẫn đang hoạt động...")
+        time.sleep(60 * 5)  # mỗi 5 phút in 1 lần
+
+threading.Thread(target=heartbeat, daemon=True).start()
 
 if __name__ == "__main__":
     import sys
@@ -184,11 +242,3 @@ if __name__ == "__main__":
     # Bật debug để log chi tiết request
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 10000)), debug=True)
 
-import threading, time
-
-def heartbeat():
-    while True:
-        print("💓 Bot vẫn đang hoạt động...")
-        time.sleep(60 * 5)  # mỗi 5 phút in 1 lần
-
-threading.Thread(target=heartbeat, daemon=True).start()
