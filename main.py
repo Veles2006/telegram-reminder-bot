@@ -271,6 +271,36 @@ def webhook():
             send_message(chat_id, summary)
             print(f"✅ Đã tạo người chơi ID {new_id}: {player_data}")
 
+        #Hiện bảng trạng thái người chơi /playerStatus Veles
+        elif text.startswith("/playerStatus"):
+            parts = text.split(" ", 1)
+            if len(parts) < 2:
+                send_message(chat_id, "⚠️ Vui lòng nhập tên nhân vật. Ví dụ:\n/playerStatus Veles")
+            else:
+                name = parts[1].strip()
+                player = collection.find_one({"name": name, "type": "player"})
+
+                if not player:
+                    send_message(chat_id, f"❌ Không tìm thấy người chơi tên '{name}'.")
+                else:
+                    stats = player.get("stats", {})
+                    summary = (
+                        f"📜 <b>BẢNG TRẠNG THÁI</b>\n"
+                        f"👤 Tên: {player.get('name', '?')}\n"
+                        f"⚧ Giới tính: {player.get('gender', '?')}\n"
+                        f"🎂 Tuổi: {player.get('age', '?')}\n"
+                        f"🆔 ID: {player.get('_id')}\n\n"
+                        f"📊 <b>Chỉ số:</b>\n"
+                        f"💪 Sức mạnh: {stats.get('strength', '?')}\n"
+                        f"🧠 Trí tuệ: {stats.get('intelligence', '?')}\n"
+                        f"❤️ Thể lực: {stats.get('stamina', '?')}\n"
+                        f"⚡ Tốc độ: {stats.get('speed', '?')}\n"
+                        f"✨ Mỹ lực: {stats.get('charm', '?')}\n\n"
+                        f"🎯 Nghề nghiệp: {player.get('occupation', '(Chưa có)')}\n"
+                        f"🏅 Danh hiệu: {', '.join(player.get('titles', [])) if player.get('titles') else '(Trống)'}\n"
+                        f"🪄 Kỹ năng: {', '.join(player.get('skills', [])) if player.get('skills') else '(Chưa học kỹ năng nào)'}"
+                    )
+                    send_message(chat_id, summary)
 
         else:
             send_message(chat_id, "Câu lệnh không hợp lệ 🫠")
