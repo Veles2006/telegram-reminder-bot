@@ -221,6 +221,56 @@ def webhook():
                     new_id = str(result.inserted_id)
                     send_message(chat_id, f"✅ Đã tạo nhân vật mới với ID: {new_id}")
                     print(f"Đã thêm nhân vật ID {new_id}: {char_data}")
+        
+        #Tạo người chơi /createPlayer Veles Nữ 18
+        elif text.startswith("/createPlayer"):
+            parts = text.split(" ", 3)
+            # Cấu trúc: /createPlayer <tên> [giới tính] [tuổi]
+            name = parts[1] if len(parts) > 1 else "Vô danh"
+            gender = parts[2] if len(parts) > 2 else "?"
+            age = int(parts[3]) if len(parts) > 3 and parts[3].isdigit() else "?"
+
+            import random
+            # Tạo thông tin người chơi mặc định
+            player_data = {
+                "name": name,
+                "gender": gender,
+                "age": age,
+                "stats": {
+                    "strength": random.randint(1, 10),
+                    "intelligence": random.randint(1, 10),
+                    "stamina": random.randint(1, 10),
+                    "speed": random.randint(1, 10),
+                    "charm": random.randint(1, 10)
+                },
+                "skills": [],
+                "titles": [],
+                "occupation": "",
+                "created_at": time.time(),
+                "status": "active",
+                "type": "player"
+            }
+
+            result = collection.insert_one(player_data)
+            new_id = str(result.inserted_id)
+
+            summary = (
+                f"🎮 <b>Người chơi mới được tạo!</b>\n"
+                f"🆔 ID: {new_id}\n"
+                f"👤 Tên: {player_data['name']}\n"
+                f"⚧ Giới tính: {player_data['gender']}\n"
+                f"🎂 Tuổi: {player_data['age']}\n\n"
+                f"📊 Chỉ số:\n"
+                f"💪 Sức mạnh: {player_data['stats']['strength']}\n"
+                f"🧠 Trí tuệ: {player_data['stats']['intelligence']}\n"
+                f"❤️ Thể lực: {player_data['stats']['stamina']}\n"
+                f"⚡ Tốc độ: {player_data['stats']['speed']}\n"
+                f"✨ Mỹ lực: {player_data['stats']['charm']}"
+            )
+
+            send_message(chat_id, summary)
+            print(f"✅ Đã tạo người chơi ID {new_id}: {player_data}")
+
 
         else:
             send_message(chat_id, "Câu lệnh không hợp lệ 🫠")
