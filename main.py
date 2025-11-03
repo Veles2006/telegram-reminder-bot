@@ -302,6 +302,82 @@ def webhook():
                     )
                     send_message(chat_id, summary)
 
+        #Lệnh sửa người chơi /editPlayer <tên> <trường> <giá trị mới>
+        elif text.startswith("/editPlayer"):
+            parts = text.split(" ", 3)
+            if len(parts) < 4:
+                send_message(chat_id,
+                    "⚠️ Cú pháp sai. Hãy dùng dạng:\n"
+                    "/editPlayer <tên> <trường> <giá trị>\n\n"
+                    "Ví dụ:\n"
+                    "/editPlayer Veles age 25\n"
+                    "/editPlayer Veles gender Nam\n"
+                    "/editPlayer Veles strength 8"
+                )
+            else:
+                name = parts[1].strip()
+                field = parts[2].strip().lower()
+                value = parts[3].strip()
+
+                player = collection.find_one({"name": name, "type": "player"})
+                if not player:
+                    send_message(chat_id, f"❌ Không tìm thấy người chơi tên '{name}'.")
+                    return "ok", 200
+
+                # Map tên trường trong lệnh sang key thực tế
+                valid_fields = {
+                    "name": "name",
+                    "gender": "gender",
+                    "age": "age",
+                    "strength": "stats.strength",
+                    "intelligence": "stats.intelligence",
+                    "stamina": "stats.stamina",
+                    "speed": "stats.speed",
+                    "charm": "stats.charm"
+                }
+
+                if field not in valid_fields:
+                    send_message(chat_id, f"⚠️ Trường '{field}' không hợp lệ. Có thể sửa: {', '.join(valid_fields.keys())}")
+                    return "ok", 200
+
+                # Nếu là số, ép kiểu
+                if value.isdigit():
+                    value = int(value)
+
+                # Tạo key MongoDB động (vd: "stats.strength")
+                update_field = valid_fields[field]
+                result = collection.update_one(
+                    {"_id": player["_id"]},
+                    {"$set": {update_field: value}}
+                )
+
+                if result.modified_count > 0:
+                    send_message(chat_id, f"✅ Đã cập nhật {field} của '{name}' thành: {value}")
+                    print(f"✏️ Đã sửa {field} cho {name}: {value}")
+                else:
+                    send_message(chat_id, f"⚠️ Không có thay đổi (có thể giá trị mới trùng giá trị cũ).")
+
+
+        #Lệnh xoá người chơi /deletePlayer Veles
+        elif text.startswith("/deletePlayer"):
+            parts = text.split(" ", 1)
+            if len(parts) < 2:
+                send_message(chat_id, "⚠️ Vui lòng nhập tên nhân vật cần xóa. Ví dụ:\n/deletePlayer Veles")
+            else:
+                name = parts[1].strip()
+                player = collection.find_one({"name": name, "type": "player"})
+
+                if not player:
+                    send_message(chat_id, f"❌ Không tìm thấy người chơi tên '{name}'.")
+                else:
+                    result = collection.delete_one({"_id": player["_id"]})
+                    if result.deleted_count > 0:
+                        send_message(chat_id, f"🗑️ Đã xóa người chơi '{name}' thành công.")
+                        print(f"🗑️ Đã xóa player: {player}")
+                    else:
+                        send_message(chat_id, f"⚠️ Không thể xóa '{name}'. Có thể đã bị xóa trước đó.")
+
+
         else:
             send_message(chat_id, "Câu lệnh không hợp lệ 🫠")
 
