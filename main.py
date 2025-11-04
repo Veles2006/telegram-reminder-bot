@@ -270,6 +270,8 @@ def webhook():
 
             send_message(chat_id, summary)
             print(f"✅ Đã tạo người chơi ID {new_id}: {player_data}")
+            print("🔗 Đang kết nối Mongo URI:", MONGO_URI)
+
 
         #Hiện bảng trạng thái người chơi /playerStatus Veles
         elif text.startswith("/playerStatus"):
