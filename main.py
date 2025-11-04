@@ -29,6 +29,8 @@ client = MongoClient(MONGO_URI, tlsCAFile=certifi.where())
 db = client["lifeup-legend"]     # Tên database bạn đã tạo trên MongoDB
 collection = db["characters"] 
 
+print("🔗 Đang kết nối Mongo URI:", MONGO_URI)
+
 logging.getLogger("pymongo").setLevel(logging.WARNING)
 
 # Kiểm tra biến môi trường (tùy chọn, để đảm bảo không thiếu)
@@ -271,6 +273,8 @@ def webhook():
             send_message(chat_id, summary)
             print(f"✅ Đã tạo người chơi ID {new_id}: {player_data}")
             print("🔗 Đang kết nối Mongo URI:", MONGO_URI)
+            print("🧠 MongoDB info:", client.server_info().get("version", "Không lấy được"))
+
 
 
         #Hiện bảng trạng thái người chơi /playerStatus Veles
