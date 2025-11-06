@@ -1,7 +1,9 @@
-Flask
+flask
 requests
+pymongo
+python-dotenv
 openai
 pixivpy3
-python-dotenv
-cloudinary
-pymongo
+schedule
+certifi
+gunicorn

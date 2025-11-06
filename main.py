@@ -123,7 +123,7 @@ def send_task():
 
 # Đặt lịch 7h sáng & 7h tối
 schedule.every().day.at("07:00").do(send_task)
-schedule.every().day.at("23:26").do(send_task)
+schedule.every().day.at("23:37").do(send_task)
 
 # vòng lặp vô hạn
 def run_scheduler():
