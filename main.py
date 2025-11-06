@@ -7,6 +7,7 @@ import json
 import threading, time
 import certifi
 import logging
+import schedule
 
 
 # Thêm các import cần thiết từ telegram_daily.py
@@ -14,6 +15,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from pixivpy3 import AppPixivAPI
 from pymongo import MongoClient
+from datetime import datetime, timedelta
 
 # (Có thể import cloudinary, MongoClient nếu dự định dùng, nhưng nếu không dùng có thể bỏ)
 
@@ -28,6 +30,7 @@ MONGO_URI = os.getenv("MONGODB_URI")    # Chuỗi kết nối MongoDB (đọc t�
 client = MongoClient(MONGO_URI, tlsCAFile=certifi.where())
 db = client["lifeup-legend"]     # Tên database bạn đã tạo trên MongoDB
 collection = db["characters"] 
+tasks = db["tasks"]
 
 print("🔗 Đang kết nối Mongo URI:", MONGO_URI)
 
@@ -53,6 +56,84 @@ pixiv_api.auth(refresh_token=PIXIV_REFRESH_TOKEN)
 TG_API = f"https://api.telegram.org/bot{BOT_TOKEN}"
 TG_SEND_MESSAGE = f"{TG_API}/sendMessage"
 TG_SEND_PHOTO = f"{TG_API}/sendPhoto"
+
+# Hàm tạo nhiệm vụ
+def create_task(task):
+    tasks.insert_one(task)
+
+def get_today_tasks():
+    today = datetime.now().strftime("%Y-%m-%d")
+    return list(tasks.find({"date": today}))
+
+def generate_daily_task():
+    prompt = f"""
+    Hãy tạo một nhiệm vụ ngắn gọn mang tính phát triển bản thân.
+    Trả về JSON có các trường:
+    - name: tên nhiệm vụ
+    - short_desc: mô tả ngắn gọn
+    - full_desc: mô tả đầy đủ
+    - requirement: yêu cầu
+    - reward: phần thưởng
+    - penalty: hình phạt
+    - deadline: thời hạn (vd: hôm nay 23:59)
+    """
+    response = openai_client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": prompt}],
+    )
+    text = response.choices[0].message.content.strip()
+    return text
+
+def send_task():
+    task_json = generate_daily_task()
+    try:
+        task = json.loads(task_json)
+    except:
+        print("❌ Lỗi JSON từ GPT, bỏ qua")
+        return
+
+    # lưu vào MongoDB
+    create_task({
+        "name": task["name"],
+        "type": "Hàng ngày",
+        "short_desc": task["short_desc"],
+        "full_desc": task["full_desc"],
+        "requirement": task["requirement"],
+        "reward": task["reward"],
+        "penalty": task["penalty"],
+        "deadline": task["deadline"],
+        "date": datetime.now().strftime("%Y-%m-%d"),
+        "status": "chưa hoàn thành",  # 🧩 trạng thái mặc định
+        "difficulty": random.choice(["Dễ", "Trung bình", "Khó"])  # 🎯 độ khó ngẫu nhiên
+    })
+
+    # gửi tin nhắn tóm tắt lên Telegram
+    message = (
+        f"🧭 <b>Tên nhiệm vụ:</b> {task['name']}\n"
+        f"📘 <b>Xếp loại:</b> Hàng ngày\n"
+        f"📝 <b>Mô tả:</b> {task['short_desc']}\n"
+        f"⏰ <b>Hết hạn:</b> {task['deadline']}\n"
+        f"🔗 <b>Chi tiết:</b> https://lifeup-legend.vercel.app/tasks\n"
+    )
+    requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", {
+        "chat_id": CHAT_ID,
+        "text": message,
+        "parse_mode": "HTML"
+    })
+
+# Đặt lịch 7h sáng & 7h tối
+schedule.every().day.at("07:00").do(send_task)
+schedule.every().day.at("23:26").do(send_task)
+
+# vòng lặp vô hạn
+def run_scheduler():
+    while True:
+        schedule.run_pending()
+        time.sleep(60)
+
+# Chạy song song với Flask
+import threading
+threading.Thread(target=run_scheduler, daemon=True).start()
 
 # Hàm gửi tin nhắn văn bản (đã có sẵn trong main.py cũ)
 def send_message(chat_id, text):
@@ -383,6 +464,7 @@ def webhook():
                     else:
                         send_message(chat_id, f"⚠️ Không thể xóa '{name}'. Có thể đã bị xóa trước đó.")
 
+        
 
         else:
             send_message(chat_id, "Câu lệnh không hợp lệ 🫠")
