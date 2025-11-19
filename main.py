@@ -31,6 +31,7 @@ client = MongoClient(MONGO_URI, tlsCAFile=certifi.where())
 db = client["lifeup-legend"]     # Tên database bạn đã tạo trên MongoDB
 collection = db["characters"] 
 tasks = db["tasks"]
+player = db["players"]
 
 print("🔗 Đang kết nối Mongo URI:", MONGO_URI)
 
@@ -334,7 +335,7 @@ def webhook():
                 "type": "player"
             }
 
-            result = collection.insert_one(player_data)
+            result = player.insert_one(player_data)
             new_id = str(result.inserted_id)
 
             summary = (
@@ -365,7 +366,7 @@ def webhook():
                 send_message(chat_id, "⚠️ Vui lòng nhập tên nhân vật. Ví dụ:\n/playerStatus Veles")
             else:
                 name = parts[1].strip()
-                player = collection.find_one({"name": name, "type": "player"})
+                player = player.find_one({"name": name, "type": "player"})
 
                 if not player:
                     send_message(chat_id, f"❌ Không tìm thấy người chơi tên '{name}'.")
@@ -406,7 +407,7 @@ def webhook():
                 field = parts[2].strip().lower()
                 value = parts[3].strip()
 
-                player = collection.find_one({"name": name, "type": "player"})
+                player = player.find_one({"name": name, "type": "player"})
                 if not player:
                     send_message(chat_id, f"❌ Không tìm thấy người chơi tên '{name}'.")
                     return "ok", 200
@@ -433,7 +434,7 @@ def webhook():
 
                 # Tạo key MongoDB động (vd: "stats.strength")
                 update_field = valid_fields[field]
-                result = collection.update_one(
+                result = player.update_one(
                     {"_id": player["_id"]},
                     {"$set": {update_field: value}}
                 )
@@ -452,12 +453,12 @@ def webhook():
                 send_message(chat_id, "⚠️ Vui lòng nhập tên nhân vật cần xóa. Ví dụ:\n/deletePlayer Veles")
             else:
                 name = parts[1].strip()
-                player = collection.find_one({"name": name, "type": "player"})
+                player = player.find_one({"name": name, "type": "player"})
 
                 if not player:
                     send_message(chat_id, f"❌ Không tìm thấy người chơi tên '{name}'.")
                 else:
-                    result = collection.delete_one({"_id": player["_id"]})
+                    result = player.delete_one({"_id": player["_id"]})
                     if result.deleted_count > 0:
                         send_message(chat_id, f"🗑️ Đã xóa người chơi '{name}' thành công.")
                         print(f"🗑️ Đã xóa player: {player}")
